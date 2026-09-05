@@ -21,6 +21,13 @@ public class EventService {
         return eventRepository.findAll();
     }
 
+    public List<Event> searchEvents(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            return eventRepository.findAll();
+        }
+        return eventRepository.findByTitleContainingIgnoreCase(title);
+    }
+
     public Optional<Event> getEventById(String id) {
         return eventRepository.findById(id);
     }

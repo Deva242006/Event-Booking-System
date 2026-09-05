@@ -21,6 +21,11 @@ public class EventController {
         return eventService.getAllEvents();
     }
 
+    @GetMapping("/search")
+    public List<Event> searchEvents(@RequestParam(required = false) String title) {
+        return eventService.searchEvents(title);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Event> getEventById(@PathVariable String id) {
         return eventService.getEventById(id)

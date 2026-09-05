@@ -9,4 +9,5 @@ import java.util.List;
 public interface EventRepository extends MongoRepository<Event, String> {
     List<Event> findByOrganizerId(String organizerId);
     List<Event> findByVenueId(String venueId);
+    List<Event> findByTitleContainingIgnoreCase(String title);
 }

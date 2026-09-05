@@ -3,6 +3,7 @@ package com.example.eventbooking.service;
 import com.example.eventbooking.model.Booking;
 import com.example.eventbooking.model.BookingStatus;
 import com.example.eventbooking.repository.BookingRepository;
+import com.example.eventbooking.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,13 @@ public class PaymentService {
     private BookingRepository bookingRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private QrCodeService qrCodeService;
+
+    @Autowired
+    private EmailService emailService;
 
     public Booking processMockPayment(String bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -34,6 +41,13 @@ public class PaymentService {
         String qrCodeUrl = qrCodeService.generateQrCodeBase64(ticketData);
         booking.setQrCodeUrl(qrCodeUrl);
 
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        userRepository.findById(booking.getUserId()).ifPresent(user -> {
+            String subject = "Your Event Ticket Confirmation - " + booking.getId();
+            emailService.sendTicketEmail(user.getEmail(), subject, ticketData, qrCodeUrl);
+        });
+
+        return savedBooking;
     }
 }
