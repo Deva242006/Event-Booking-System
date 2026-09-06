@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - EventBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 768px) {
+            .checkout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/index.html" class="navbar-brand">EventBooking</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container">
+        <h2 class="text-center mb-2">Checkout</h2>
+        <div id="alert" class="alert"></div>
+
+        <div class="checkout-grid d-none" id="checkoutContainer">
+            <!-- Payment Form -->
+            <div class="glass-card">
+                <h3>Payment Details</h3>
+                <p class="mb-2">This is a mock payment interface.</p>
+                <form id="paymentForm">
+                    <div class="input-group">
+                        <label for="cardName">Name on Card</label>
+                        <input type="text" id="cardName" required placeholder="John Doe">
+                    </div>
+                    <div class="input-group">
+                        <label for="cardNumber">Card Number</label>
+                        <input type="text" id="cardNumber" required placeholder="0000 0000 0000 0000" maxlength="19">
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="input-group" style="flex: 1;">
+                            <label for="expiry">Expiry</label>
+                            <input type="text" id="expiry" required placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label for="cvv">CVV</label>
+                            <input type="password" id="cvv" required placeholder="123" maxlength="3">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mt-2">Pay Now</button>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="glass-card">
+                <h3>Order Summary</h3>
+                <div class="mt-2">
+                    <div class="summary-item">
+                        <span style="color: var(--text-secondary)">Booking ID</span>
+                        <span id="summaryBookingId">--</span>
+                    </div>
+                    <div class="summary-item">
+                        <span style="color: var(--text-secondary)">Status</span>
+                        <span id="summaryStatus" style="color: #fbbf24; font-weight: 600;">--</span>
+                    </div>
+                    <div class="summary-item">
+                        <span style="color: var(--text-secondary)">Tickets</span>
+                        <span id="summaryTickets">--</span>
+                    </div>
+                    <div class="summary-total">
+                        <span>Total Price</span>
+                        <span id="summaryTotal">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loader-overlay" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentBooking = null;
+
+        async function loadBookingDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const bookingId = params.get('bookingId');
+            
+            if (!bookingId) {
+                showAlert('No booking ID provided.', 'error');
+                return;
+            }
+
+            if (!isAuthenticated()) {
+                window.location.href = `/login.html?redirect=/checkout.html?bookingId=${bookingId}`;
+                return;
+            }
+
+            showLoader();
+            try {
+                const booking = await apiFetch(`/bookings/${bookingId}`);
+                currentBooking = booking;
+                
+                document.getElementById('summaryBookingId').textContent = booking.id;
+                document.getElementById('summaryStatus').textContent = booking.status;
+                document.getElementById('summaryTickets').textContent = booking.seatsBooked;
+                document.getElementById('summaryTotal').textContent = '$' + booking.totalPrice.toFixed(2);
+                
+                if(booking.status === 'CONFIRMED') {
+                    showAlert('This booking is already confirmed.', 'success');
+                    document.getElementById('paymentForm').querySelector('button').disabled = true;
+                    document.getElementById('summaryStatus').style.color = '#4ade80';
+                }
+
+                document.getElementById('checkoutContainer').classList.remove('d-none');
+            } catch (error) {
+                showAlert('Failed to load booking: ' + error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            showLoader();
+            try {
+                const confirmedBooking = await apiFetch(`/payments/${currentBooking.id}/mock`, {
+                    method: 'POST'
+                });
+                
+                showAlert('Payment successful! Your tickets are confirmed.', 'success');
+                setTimeout(() => {
+                    window.location.href = '/my-bookings.html';
+                }, 2000);
+            } catch (error) {
+                showAlert('Payment failed: ' + error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBookingDetails();
+        });
+    </script>
+</body>
+</html>

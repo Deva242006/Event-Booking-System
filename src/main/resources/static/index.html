@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover Events - EventBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(to bottom, rgba(99,102,241,0.1), transparent);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .search-bar {
+            max-width: 600px;
+            margin: 2rem auto 0;
+            display: flex;
+            gap: 1rem;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/index.html" class="navbar-brand">EventBooking</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="hero">
+        <h1>Discover Amazing Events</h1>
+        <p>Book tickets for the best concerts, conferences, and shows happening around you.</p>
+        
+        <form class="search-bar" id="searchForm">
+            <input type="text" id="searchInput" placeholder="Search events by title...">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2 class="mb-2">Upcoming Events</h2>
+        <div id="alert" class="alert"></div>
+        <div class="events-grid" id="eventsGrid">
+            <!-- Events injected here -->
+        </div>
+    </div>
+
+    <div class="loader-overlay" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function fetchEvents(query = '') {
+            showLoader();
+            try {
+                const endpoint = query ? `/events/search?title=${encodeURIComponent(query)}` : '/events';
+                const events = await apiFetch(endpoint);
+                
+                const grid = document.getElementById('eventsGrid');
+                grid.innerHTML = '';
+                
+                if (events.length === 0) {
+                    grid.innerHTML = '<p class="text-center w-100 mt-2">No events found.</p>';
+                    return;
+                }
+
+                events.forEach(event => {
+                    const date = new Date(event.date).toLocaleDateString();
+                    const card = document.createElement('div');
+                    card.className = 'glass-card event-card';
+                    card.onclick = () => window.location.href = `/event.html?id=${event.id}`;
+                    
+                    card.innerHTML = `
+                        <div class="event-card-img">
+                            Image Placeholder
+                        </div>
+                        <h3 class="event-title">${event.title}</h3>
+                        <div class="event-meta">
+                            <span>📅 ${date}</span>
+                            <span class="event-price">$${event.price.toFixed(2)}</span>
+                        </div>
+                        <p style="font-size: 0.9rem; flex: 1; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${event.description}</p>
+                        <button class="btn btn-secondary w-100 mt-1">View Details</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                showAlert('Failed to load events: ' + error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value;
+            fetchEvents(query);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchEvents();
+        });
+    </script>
+</body>
+</html>

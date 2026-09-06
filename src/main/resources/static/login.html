@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EventBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/index.html" class="navbar-brand">EventBooking</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container flex-center">
+        <div class="glass-card" style="width: 100%; max-width: 400px;">
+            <h2 class="text-center mb-2">Welcome Back</h2>
+            <div id="alert" class="alert"></div>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="Enter your email">
+                </div>
+                
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter your password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 mt-1">Sign In</button>
+            </form>
+            
+            <p class="text-center mt-2" style="font-size: 0.9rem;">
+                Don't have an account? <a href="/register.html" style="color: var(--accent-primary);">Register here</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="loader-overlay" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showLoader();
+            try {
+                const data = await apiFetch('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                
+                setAuthData(data.token, {
+                    name: data.name,
+                    email: data.email,
+                    role: data.role
+                });
+                
+                window.location.href = '/index.html';
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        });
+    </script>
+</body>
+</html>

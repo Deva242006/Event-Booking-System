@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details - EventBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .event-header {
+            background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(192,132,252,0.2) 100%);
+            border-radius: 16px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .event-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .event-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .booking-card {
+            position: sticky;
+            top: 100px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/index.html" class="navbar-brand">EventBooking</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container">
+        <div id="alert" class="alert"></div>
+        <div id="eventContainer" class="d-none">
+            <div class="event-header">
+                <h1 id="eventTitle">Loading...</h1>
+                <div class="event-meta" style="font-size: 1.1rem; justify-content: flex-start; gap: 2rem;">
+                    <span id="eventDate">📅 --</span>
+                    <span id="eventVenue">📍 --</span>
+                </div>
+            </div>
+
+            <div class="event-content">
+                <div>
+                    <h2>About This Event</h2>
+                    <p id="eventDescription" style="font-size: 1.1rem; line-height: 1.8;"></p>
+                    
+                    <h2 class="mt-2">Venue Details</h2>
+                    <div class="glass-card">
+                        <h3 id="venueName">Loading...</h3>
+                        <p id="venueAddress">Loading address...</p>
+                        <p><strong>Capacity:</strong> <span id="venueCapacity">--</span></p>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="glass-card booking-card">
+                        <h3>Book Tickets</h3>
+                        <p class="mb-2" style="font-size: 1.5rem; color: var(--accent-primary); font-weight: 700;" id="eventPrice">$0.00</p>
+                        
+                        <form id="bookingForm">
+                            <div class="input-group">
+                                <label for="quantity">Number of Tickets</label>
+                                <select id="quantity" required>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Hold Seats & Checkout</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loader-overlay" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentEvent = null;
+
+        async function loadEventDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const eventId = params.get('id');
+            
+            if (!eventId) {
+                showAlert('No event ID provided.', 'error');
+                return;
+            }
+
+            showLoader();
+            try {
+                const event = await apiFetch(`/events/${eventId}`);
+                currentEvent = event;
+                
+                document.getElementById('eventTitle').textContent = event.title;
+                document.getElementById('eventDate').textContent = '📅 ' + new Date(event.date).toLocaleString();
+                document.getElementById('eventDescription').textContent = event.description;
+                document.getElementById('eventPrice').textContent = '$' + event.price.toFixed(2);
+                
+                // Fetch Venue Details
+                const venue = await apiFetch(`/venues/${event.venueId}`);
+                document.getElementById('eventVenue').textContent = '📍 ' + venue.name;
+                document.getElementById('venueName').textContent = venue.name;
+                document.getElementById('venueAddress').textContent = venue.address;
+                document.getElementById('venueCapacity').textContent = venue.capacity;
+                
+                document.getElementById('eventContainer').classList.remove('d-none');
+            } catch (error) {
+                showAlert('Failed to load event details: ' + error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!isAuthenticated()) {
+                window.location.href = `/login.html?redirect=/event.html?id=${currentEvent.id}`;
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('quantity').value);
+            
+            showLoader();
+            try {
+                const bookingRequest = {
+                    eventId: currentEvent.id,
+                    seatsToHold: quantity
+                };
+                
+                const booking = await apiFetch('/bookings/hold', {
+                    method: 'POST',
+                    body: JSON.stringify(bookingRequest)
+                });
+                
+                // Redirect to checkout with booking ID
+                window.location.href = `/checkout.html?bookingId=${booking.id}`;
+            } catch (error) {
+                showAlert('Booking failed: ' + error.message, 'error');
+            } finally {
+                hideLoader();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEventDetails();
+        });
+    </script>
+</body>
+</html>
