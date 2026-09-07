@@ -15,7 +15,7 @@ const Login = ({ login }) => {
 
     try {
       const response = await api.login({ email, password });
-      login(response.accessToken, { 
+      login(response.token, { 
         email: response.email, 
         name: response.name,
         role: response.role 

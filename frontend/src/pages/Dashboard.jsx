@@ -62,16 +62,27 @@ const Dashboard = ({ user }) => {
               <div key={booking.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '0.75rem', backgroundColor: 'var(--bg-color)' }}>
                 
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{booking.event.title}</h3>
-                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                    <span>{booking.seats} {booking.seats > 1 ? 'Tickets' : 'Ticket'}</span>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>
+                    Event: {booking.eventId}
+                  </h3>
+                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                    <span>{booking.ticketCategoryName}</span>
+                    <span>•</span>
+                    <span>{booking.quantity} {booking.quantity > 1 ? 'Tickets' : 'Ticket'}</span>
                     <span>•</span>
                     <span>Total: ${booking.totalAmount}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                    Booked: {booking.bookingTime ? new Date(booking.bookingTime).toLocaleString() : 'N/A'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {booking.status === 'CONFIRMED' ? (
                       <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <CheckCircle size={12} /> Confirmed
+                      </span>
+                    ) : booking.status === 'CANCELLED' ? (
+                      <span className="badge" style={{ backgroundColor: 'rgba(107, 114, 128, 0.1)', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        Cancelled
                       </span>
                     ) : (
                       <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -93,8 +104,15 @@ const Dashboard = ({ user }) => {
                       {paymentProcessing === booking.id ? 'Processing...' : 'Pay Now'}
                     </button>
                   )}
-                  {booking.status === 'CONFIRMED' && (
-                    <button className="btn btn-outline" disabled style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {booking.status === 'CONFIRMED' && booking.qrCodeUrl && (
+                    <button 
+                      className="btn btn-outline" 
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      onClick={() => {
+                        const win = window.open('', '_blank');
+                        win.document.write(`<img src="${booking.qrCodeUrl}" alt="Ticket QR Code" style="max-width:300px"/>`);
+                      }}
+                    >
                       <Ticket size={18} />
                       View Ticket
                     </button>

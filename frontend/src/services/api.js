@@ -16,14 +16,30 @@ const request = async (endpoint, options = {}) => {
     headers,
   });
 
+  // Read the body text once
+  const text = await response.text();
+
   if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(errorData || 'An error occurred while fetching data');
+    // Try to parse the error as JSON, otherwise use the text
+    let errorMessage;
+    try {
+      const errorData = JSON.parse(text);
+      errorMessage = errorData.message || errorData.error || text;
+    } catch {
+      errorMessage = text || 'An error occurred while fetching data';
+    }
+    throw new Error(errorMessage);
   }
 
   // Handle empty responses
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) return null;
+  
+  // Try to parse as JSON, return raw text if not JSON
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
 };
 
 export const api = {
@@ -33,7 +49,7 @@ export const api = {
 
   // Events
   getEvents: () => request('/events', { method: 'GET' }),
-  searchEvents: (title) => request(`/events/search?title=${title}`, { method: 'GET' }),
+  searchEvents: (title) => request(`/events/search?title=${encodeURIComponent(title)}`, { method: 'GET' }),
   getEventById: (id) => request(`/events/${id}`, { method: 'GET' }),
 
   // Bookings
