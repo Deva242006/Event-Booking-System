@@ -4,7 +4,6 @@ import com.example.eventbooking.model.Venue;
 import com.example.eventbooking.service.VenueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,13 +28,11 @@ public class VenueController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ORGANIZER')")
     public Venue createVenue(@RequestBody Venue venue) {
         return venueService.createVenue(venue);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ORGANIZER')")
     public ResponseEntity<Venue> updateVenue(@PathVariable String id, @RequestBody Venue venueDetails) {
         try {
             return ResponseEntity.ok(venueService.updateVenue(id, venueDetails));
@@ -45,7 +42,6 @@ public class VenueController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteVenue(@PathVariable String id) {
         venueService.deleteVenue(id);
         return ResponseEntity.ok().build();

@@ -51,6 +51,9 @@ export const api = {
   getEvents: () => request('/events', { method: 'GET' }),
   searchEvents: (title) => request(`/events/search?title=${encodeURIComponent(title)}`, { method: 'GET' }),
   getEventById: (id) => request(`/events/${id}`, { method: 'GET' }),
+  createEvent: (eventData) => request('/events', { method: 'POST', body: JSON.stringify(eventData) }),
+  updateEvent: (id, eventData) => request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(eventData) }),
+  deleteEvent: (id) => request(`/events/${id}`, { method: 'DELETE' }),
 
   // Bookings
   holdSeats: (bookingData) => request('/bookings/hold', { method: 'POST', body: JSON.stringify(bookingData) }),
@@ -58,6 +61,9 @@ export const api = {
 
   // Venues
   getVenues: () => request('/venues', { method: 'GET' }),
+  createVenue: (venueData) => request('/venues', { method: 'POST', body: JSON.stringify(venueData) }),
+  updateVenue: (id, venueData) => request(`/venues/${id}`, { method: 'PUT', body: JSON.stringify(venueData) }),
+  deleteVenue: (id) => request(`/venues/${id}`, { method: 'DELETE' }),
 
   // Payments
   processMockPayment: (bookingId) => request(`/payments/${bookingId}/mock`, { method: 'POST' }),

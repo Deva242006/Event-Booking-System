@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, User, LogOut } from 'lucide-react';
+import { Calendar, User, LogOut, Settings } from 'lucide-react';
 
 const Navbar = ({ user, logout }) => {
   const navigate = useNavigate();
@@ -24,6 +24,10 @@ const Navbar = ({ user, logout }) => {
             
             {user ? (
               <>
+                <Link to="/manage" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)' }}>
+                  <Settings size={18} />
+                  Manage
+                </Link>
                 <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)' }}>
                   <User size={18} />
                   Dashboard

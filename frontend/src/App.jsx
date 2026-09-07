@@ -7,35 +7,40 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import EventDetails from './pages/EventDetails';
 import Dashboard from './pages/Dashboard';
+import ManageEvents from './pages/ManageEvents';
 
 function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const savedUser = localStorage.getItem('user');
+    if (token && savedUser) {
       try {
         const decoded = jwtDecode(token);
-        // Usually, JWTs expire. You could add an expiration check here.
         if (decoded.exp * 1000 < Date.now()) {
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
           setUser(null);
         } else {
-          setUser({ id: decoded.sub, email: decoded.sub, name: decoded.name || 'User' }); 
+          setUser(JSON.parse(savedUser));
         }
       } catch (error) {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     }
   }, []);
 
   const login = (token, userInfo) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userInfo));
     setUser(userInfo);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
@@ -50,6 +55,7 @@ function App() {
             <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
             <Route path="/events/:id" element={<EventDetails user={user} />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+            <Route path="/manage" element={user ? <ManageEvents user={user} /> : <Navigate to="/login" />} />
           </Routes>
         </main>
       </div>

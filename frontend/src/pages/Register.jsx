@@ -7,6 +7,7 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('USER');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await api.register({ name, email, password, role: 'USER' });
+      await api.register({ name, email, password, role });
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
@@ -35,7 +36,7 @@ const Register = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <UserPlus size={48} style={{ color: 'var(--primary-color)', marginBottom: '1rem' }} />
           <h2>Create an Account</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Join us to book your favorite events</p>
+          <p style={{ color: 'var(--text-muted)' }}>Join us to book or organize events</p>
         </div>
         
         <form onSubmit={handleSubmit}>
@@ -70,7 +71,20 @@ const Register = () => {
               onChange={(e) => setPassword(e.target.value)} 
               required 
               placeholder="••••••••"
+              minLength={6}
             />
+          </div>
+          <div className="form-group">
+            <label htmlFor="role">I want to</label>
+            <select 
+              id="role" 
+              value={role} 
+              onChange={(e) => setRole(e.target.value)}
+              style={{ width: '100%' }}
+            >
+              <option value="USER">Book events (Attendee)</option>
+              <option value="ORGANIZER">Create & manage events (Organizer)</option>
+            </select>
           </div>
           
           {error && <div className="error-text" style={{ marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
