@@ -15,10 +15,11 @@ const Login = ({ login }) => {
 
     try {
       const response = await api.login({ email, password });
-      login(response.token, { 
-        email: response.email, 
+      login(response.token, {
+        id: response.id,       // ← BUG FIX: persist MongoDB _id for wishlist & review ownership
+        email: response.email,
         name: response.name,
-        role: response.role 
+        role: response.role
       });
     } catch (err) {
       setError(err.message || 'Failed to login');

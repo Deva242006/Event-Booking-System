@@ -8,6 +8,9 @@ import Register from './pages/Register';
 import EventDetails from './pages/EventDetails';
 import Dashboard from './pages/Dashboard';
 import ManageEvents from './pages/ManageEvents';
+import NearbyEvents from './pages/NearbyEvents';
+import Profile from './pages/Profile';
+import AdminPanel from './pages/AdminPanel';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -44,6 +47,8 @@ function App() {
     setUser(null);
   };
 
+  const isAdmin = user?.role === 'ROLE_ADMIN';
+
   return (
     <Router>
       <div className="app">
@@ -56,6 +61,10 @@ function App() {
             <Route path="/events/:id" element={<EventDetails user={user} />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
             <Route path="/manage" element={user ? <ManageEvents user={user} /> : <Navigate to="/login" />} />
+            <Route path="/nearby" element={<NearbyEvents />} />
+            {/* New routes */}
+            <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={isAdmin ? <AdminPanel user={user} /> : <Navigate to="/" />} />
           </Routes>
         </main>
       </div>

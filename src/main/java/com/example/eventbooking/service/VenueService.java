@@ -31,6 +31,10 @@ public class VenueService {
             venue.setLocation(venueDetails.getLocation());
             venue.setCapacity(venueDetails.getCapacity());
             venue.setSectionCapacities(venueDetails.getSectionCapacities());
+            // Persist coordinates if provided
+            if (venueDetails.getCoordinates() != null) {
+                venue.setCoordinates(venueDetails.getCoordinates());
+            }
             return venueRepository.save(venue);
         }).orElseThrow(() -> new RuntimeException("Venue not found with id: " + id));
     }

@@ -39,7 +39,7 @@ public class BookingService {
             throw new RuntimeException("Not enough seats available");
         }
 
-        // Decrement available seats (Optimistic locking should ideally be used here in production)
+        // Decrement available seats
         selectedCategory.setTotalAvailable(selectedCategory.getTotalAvailable() - request.getQuantity());
         eventRepository.save(event);
 
@@ -55,11 +55,54 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * Cancel a PENDING booking and restore the seat count.
+     * Only the booking owner (matched by userId) can cancel.
+     */
+    @Transactional
+    public Booking cancelBooking(String bookingId, String userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new RuntimeException("You are not authorised to cancel this booking");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new RuntimeException("Booking is already cancelled");
+        }
+
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new RuntimeException("Confirmed bookings cannot be cancelled here. Please contact support.");
+        }
+
+        // Restore seats back to the event
+        eventRepository.findById(booking.getEventId()).ifPresent(event -> {
+            event.getTicketCategories().stream()
+                    .filter(cat -> cat.getName().equalsIgnoreCase(booking.getTicketCategoryName()))
+                    .findFirst()
+                    .ifPresent(cat -> {
+                        cat.setTotalAvailable(cat.getTotalAvailable() + booking.getQuantity());
+                        eventRepository.save(event);
+                    });
+        });
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        return bookingRepository.save(booking);
+    }
+
     public List<Booking> getBookingsByUser(String userId) {
         return bookingRepository.findByUserId(userId);
     }
-    
+
     public Optional<Booking> getBookingById(String id) {
         return bookingRepository.findById(id);
+    }
+
+    /**
+     * Admin: get all bookings in the system.
+     */
+    public List<Booking> getAllBookings() {
+        return bookingRepository.findAll();
     }
 }

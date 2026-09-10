@@ -19,6 +19,7 @@ const ManageEvents = ({ user }) => {
     description: '',
     venueId: '',
     dateTime: '',
+    category: '',
     ticketCategories: [{ name: 'General', price: 0, totalAvailable: 100 }]
   });
   const [eventError, setEventError] = useState('');
@@ -32,6 +33,8 @@ const ManageEvents = ({ user }) => {
     name: '',
     location: '',
     capacity: 0,
+    latitude: '',
+    longitude: '',
   });
   const [venueError, setVenueError] = useState('');
   const [venueSuccess, setVenueSuccess] = useState('');
@@ -73,6 +76,7 @@ const ManageEvents = ({ user }) => {
       description: '',
       venueId: '',
       dateTime: '',
+      category: '',
       ticketCategories: [{ name: 'General', price: 0, totalAvailable: 100 }]
     });
     setEditingEvent(null);
@@ -92,6 +96,7 @@ const ManageEvents = ({ user }) => {
       description: event.description || '',
       venueId: event.venueId || '',
       dateTime: event.dateTime ? event.dateTime.slice(0, 16) : '',
+      category: event.category || '',
       ticketCategories: event.ticketCategories && event.ticketCategories.length > 0
         ? event.ticketCategories.map(c => ({ ...c }))
         : [{ name: 'General', price: 0, totalAvailable: 100 }]
@@ -111,6 +116,7 @@ const ManageEvents = ({ user }) => {
       const payload = {
         ...eventForm,
         organizerId: user.email,
+        category: eventForm.category || null,
         ticketCategories: eventForm.ticketCategories.map(cat => ({
           name: cat.name,
           price: parseFloat(cat.price),
@@ -172,7 +178,7 @@ const ManageEvents = ({ user }) => {
 
   // ─── Venue Handlers ────────────────────────────
   const resetVenueForm = () => {
-    setVenueForm({ name: '', location: '', capacity: 0 });
+    setVenueForm({ name: '', location: '', capacity: 0, latitude: '', longitude: '' });
     setEditingVenue(null);
     setVenueError('');
     setVenueSuccess('');
@@ -189,6 +195,8 @@ const ManageEvents = ({ user }) => {
       name: venue.name || '',
       location: venue.location || '',
       capacity: venue.capacity || 0,
+      latitude: venue.latitude ?? '',
+      longitude: venue.longitude ?? '',
     });
     setVenueError('');
     setVenueSuccess('');
@@ -202,9 +210,15 @@ const ManageEvents = ({ user }) => {
     setVenueSubmitting(true);
 
     try {
+      const lat = parseFloat(venueForm.latitude);
+      const lng = parseFloat(venueForm.longitude);
       const payload = {
         ...venueForm,
-        capacity: parseInt(venueForm.capacity, 10)
+        capacity: parseInt(venueForm.capacity, 10),
+        // Build [lng, lat] coordinates array for MongoDB GeoJSON if provided
+        ...((!isNaN(lat) && !isNaN(lng) && venueForm.latitude !== '' && venueForm.longitude !== '')
+          ? { coordinates: [lng, lat] }
+          : {}),
       };
 
       if (editingVenue) {
@@ -326,6 +340,18 @@ const ManageEvents = ({ user }) => {
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-category">Category</label>
+                    <select id="event-category" value={eventForm.category}
+                      onChange={(e) => setEventForm(f => ({ ...f, category: e.target.value }))}
+                      style={{ width: '100%' }}>
+                      <option value="">-- Select Category --</option>
+                      {['Music', 'Tech', 'Sports', 'Art', 'Food', 'Other'].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Ticket Categories */}
@@ -491,6 +517,20 @@ const ManageEvents = ({ user }) => {
                     <label htmlFor="venue-capacity">Capacity</label>
                     <input id="venue-capacity" type="number" required min="1" placeholder="e.g. 500"
                       value={venueForm.capacity} onChange={(e) => setVenueForm(f => ({ ...f, capacity: e.target.value }))} />
+                  </div>
+
+                  {/* Geolocation coordinates for Nearby Events */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label htmlFor="venue-lat">Latitude <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}>(for nearby search)</span></label>
+                      <input id="venue-lat" type="number" step="any" placeholder="e.g. 13.0827"
+                        value={venueForm.latitude} onChange={(e) => setVenueForm(f => ({ ...f, latitude: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="venue-lng">Longitude</label>
+                      <input id="venue-lng" type="number" step="any" placeholder="e.g. 80.2707"
+                        value={venueForm.longitude} onChange={(e) => setVenueForm(f => ({ ...f, longitude: e.target.value }))} />
+                    </div>
                   </div>
 
                   {venueError && <div className="error-text" style={{ marginBottom: '1rem', textAlign: 'center' }}>{venueError}</div>}

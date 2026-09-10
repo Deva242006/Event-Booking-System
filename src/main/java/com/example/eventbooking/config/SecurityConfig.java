@@ -57,29 +57,41 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> 
-                auth.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/events/**").permitAll()
-                    .requestMatchers("/api/venues/**").permitAll()
+            .authorizeHttpRequests(auth ->
+                auth
+                    // Public auth endpoints
+                    .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                    // Public read-only event endpoints
+                    .requestMatchers("GET", "/api/events").permitAll()
+                    .requestMatchers("GET", "/api/events/search").permitAll()
+                    .requestMatchers("GET", "/api/events/nearby").permitAll()
+                    .requestMatchers("GET", "/api/events/upcoming").permitAll()
+                    .requestMatchers("GET", "/api/events/{id}").permitAll()
+                    // Public venue reads
+                    .requestMatchers("GET", "/api/venues/**").permitAll()
+                    // Swagger / OpenAPI
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    // Admin-only routes (method-level @PreAuthorize handles the finer checks)
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    // Everything else requires auth
                     .anyRequest().authenticated()
             );
-        
+
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
-        
+
         return http.build();
     }
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setExposedHeaders(List.of("Authorization"));
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
