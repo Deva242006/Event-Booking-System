@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Plus, MapPin, Calendar, Trash2, Edit3, X, Building2, Tag, DollarSign, Users, Clock } from 'lucide-react';
+import { Plus, MapPin, Calendar, Trash2, Edit3, X, Building2, Tag, DollarSign, Users, Clock, LocateFixed } from 'lucide-react';
 
 const ManageEvents = ({ user }) => {
   const [activeTab, setActiveTab] = useState('events');
@@ -39,6 +39,8 @@ const ManageEvents = ({ user }) => {
   const [venueError, setVenueError] = useState('');
   const [venueSuccess, setVenueSuccess] = useState('');
   const [venueSubmitting, setVenueSubmitting] = useState(false);
+  const [geoLocating, setGeoLocating] = useState(false);
+  const [geoError, setGeoError] = useState('');
 
   useEffect(() => {
     fetchEvents();
@@ -186,11 +188,13 @@ const ManageEvents = ({ user }) => {
 
   const openCreateVenue = () => {
     resetVenueForm();
+    setGeoError('');
     setShowVenueForm(true);
   };
 
   const openEditVenue = (venue) => {
     setEditingVenue(venue);
+    setGeoError('');
     setVenueForm({
       name: venue.name || '',
       location: venue.location || '',
@@ -201,6 +205,30 @@ const ManageEvents = ({ user }) => {
     setVenueError('');
     setVenueSuccess('');
     setShowVenueForm(true);
+  };
+
+  const handleDetectLocation = () => {
+    setGeoError('');
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGeoLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setVenueForm(f => ({
+          ...f,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setGeoLocating(false);
+      },
+      () => {
+        setGeoError('Unable to detect location. Please allow location access and try again.');
+        setGeoLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
   };
 
   const handleVenueSubmit = async (e) => {
@@ -520,16 +548,64 @@ const ManageEvents = ({ user }) => {
                   </div>
 
                   {/* Geolocation coordinates for Nearby Events */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                      <label htmlFor="venue-lat">Latitude <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}>(for nearby search)</span></label>
-                      <input id="venue-lat" type="number" step="any" placeholder="e.g. 13.0827"
-                        value={venueForm.latitude} onChange={(e) => setVenueForm(f => ({ ...f, latitude: e.target.value }))} />
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-muted)' }}>
+                        Coordinates <span style={{ fontWeight: 400, fontSize: '0.78rem' }}>(for nearby search)</span>
+                      </label>
+                      <button
+                        id="detect-location-btn"
+                        type="button"
+                        onClick={handleDetectLocation}
+                        disabled={geoLocating}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          padding: '0.35rem 0.9rem', borderRadius: '999px',
+                          border: '1.5px solid var(--primary-color)',
+                          background: geoLocating ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.1)',
+                          color: 'var(--primary-color)', fontSize: '0.8rem',
+                          fontWeight: '600', cursor: geoLocating ? 'wait' : 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={e => { if (!geoLocating) e.currentTarget.style.background = 'rgba(99,102,241,0.2)'; }}
+                        onMouseLeave={e => { if (!geoLocating) e.currentTarget.style.background = 'rgba(99,102,241,0.1)'; }}
+                      >
+                        <LocateFixed size={14} style={{ animation: geoLocating ? 'spin 1s linear infinite' : 'none' }} />
+                        {geoLocating ? 'Detecting…' : 'Detect My Location'}
+                      </button>
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="venue-lng">Longitude</label>
-                      <input id="venue-lng" type="number" step="any" placeholder="e.g. 80.2707"
-                        value={venueForm.longitude} onChange={(e) => setVenueForm(f => ({ ...f, longitude: e.target.value }))} />
+
+                    {/* Detected coordinates success indicator */}
+                    {venueForm.latitude && venueForm.longitude && !geoError && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        padding: '0.5rem 0.85rem', borderRadius: '0.6rem', marginBottom: '0.6rem',
+                        background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)',
+                        fontSize: '0.8rem', color: '#22c55e',
+                      }}>
+                        <MapPin size={13} />
+                        <span>📍 {venueForm.latitude}°N, {venueForm.longitude}°E</span>
+                      </div>
+                    )}
+
+                    {/* Geo error */}
+                    {geoError && (
+                      <p style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>⚠️ {geoError}</p>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="venue-lat">Latitude</label>
+                        <input id="venue-lat" type="number" step="any" placeholder="e.g. 13.082700"
+                          value={venueForm.latitude}
+                          onChange={(e) => setVenueForm(f => ({ ...f, latitude: e.target.value }))} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="venue-lng">Longitude</label>
+                        <input id="venue-lng" type="number" step="any" placeholder="e.g. 80.270700"
+                          value={venueForm.longitude}
+                          onChange={(e) => setVenueForm(f => ({ ...f, longitude: e.target.value }))} />
+                      </div>
                     </div>
                   </div>
 

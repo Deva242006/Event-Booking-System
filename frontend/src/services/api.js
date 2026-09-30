@@ -49,10 +49,11 @@ export const api = {
   // ── Events ────────────────────────────────────────────────────────────────
   getEvents: () => request('/events', { method: 'GET' }),
   getUpcomingEvents: () => request('/events/upcoming', { method: 'GET' }),
-  searchEvents: (title, category) => {
+  searchEvents: (title, category, venueId) => {
     const params = new URLSearchParams();
     if (title) params.append('title', title);
     if (category && category !== 'All') params.append('category', category);
+    if (venueId) params.append('venueId', venueId);
     return request(`/events/search?${params.toString()}`, { method: 'GET' });
   },
   getEventById: (id) => request(`/events/${id}`, { method: 'GET' }),
@@ -81,6 +82,8 @@ export const api = {
 
   // ── Venues ────────────────────────────────────────────────────────────────
   getVenues: () => request('/venues', { method: 'GET' }),
+  getNearbyVenues: (lat, lng, radiusKm = 10) =>
+    request(`/venues/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`, { method: 'GET' }),
   createVenue: (venueData) => request('/venues', { method: 'POST', body: JSON.stringify(venueData) }),
   updateVenue: (id, venueData) => request(`/venues/${id}`, { method: 'PUT', body: JSON.stringify(venueData) }),
   deleteVenue: (id) => request(`/venues/${id}`, { method: 'DELETE' }),

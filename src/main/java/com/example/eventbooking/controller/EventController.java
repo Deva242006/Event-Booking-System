@@ -49,8 +49,9 @@ public class EventController {
     @GetMapping("/search")
     public List<Event> searchEvents(
             @RequestParam(required = false) String title,
-            @RequestParam(required = false) String category) {
-        return eventService.searchEvents(title, category);
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String venueId) {
+        return eventService.searchEvents(title, category, venueId);
     }
 
     /**

@@ -50,18 +50,40 @@ public class EventService {
      * Enhanced search: filter by title and/or category.
      */
     public List<Event> searchEvents(String title, String category) {
-        boolean hasTitle = title != null && !title.trim().isEmpty();
-        boolean hasCategory = category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All");
+        return searchEvents(title, category, null);
+    }
 
+    /**
+     * Enhanced search: filter by title, category, and/or venueId.
+     */
+    public List<Event> searchEvents(String title, String category, String venueId) {
+        boolean hasTitle    = title   != null && !title.trim().isEmpty();
+        boolean hasCategory = category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All");
+        boolean hasVenue    = venueId  != null && !venueId.trim().isEmpty();
+
+        // Start with the broadest candidate set, then narrow down
+        List<Event> results;
         if (hasTitle && hasCategory) {
-            return eventRepository.findByTitleContainingIgnoreCaseAndCategory(title, category);
+            results = eventRepository.findByTitleContainingIgnoreCaseAndCategory(title, category);
         } else if (hasTitle) {
-            return eventRepository.findByTitleContainingIgnoreCase(title);
+            results = eventRepository.findByTitleContainingIgnoreCase(title);
         } else if (hasCategory) {
-            return eventRepository.findByCategory(category);
+            results = eventRepository.findByCategory(category);
+        } else if (hasVenue) {
+            results = eventRepository.findByVenueId(venueId);
         } else {
-            return eventRepository.findAll();
+            results = eventRepository.findAll();
         }
+
+        // Apply venue filter on top if we already filtered by title/category
+        if (hasVenue && (hasTitle || hasCategory)) {
+            final String fv = venueId;
+            results = results.stream()
+                    .filter(e -> fv.equals(e.getVenueId()))
+                    .collect(Collectors.toList());
+        }
+
+        return results;
     }
 
     // Backward-compatible overload

@@ -214,6 +214,12 @@ tr:hover td {
   50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
 }
 
+/* Spin animation for location detect icon */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* Sticky header compensation */
 main.container { padding-top: 2rem; }
 

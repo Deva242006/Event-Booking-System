@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Search, DollarSign, Navigation, Tag, Star, Heart } from 'lucide-react';
+import { Calendar, MapPin, Search, DollarSign, Navigation, Tag, Star, Heart, Building2, ChevronDown, Sliders, LocateFixed, X } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Music', 'Tech', 'Sports', 'Art', 'Food', 'Other'];
 
@@ -28,18 +28,38 @@ const Home = () => {
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+
+  // All venues (from DB) vs. nearby-filtered venues shown in dropdown
+  const [allVenues, setAllVenues] = useState([]);
+  const [venues, setVenues] = useState([]);          // what dropdown shows
+  const [activeVenue, setActiveVenue] = useState('');
+
+  // Near-my-location venue filter state
+  const [nearbyVenueMode, setNearbyVenueMode] = useState(false);
+  const [nearbyVenueRadius, setNearbyVenueRadius] = useState(10);
+  const [venueGeoLoading, setVenueGeoLoading] = useState(false);
+  const [venueGeoError, setVenueGeoError] = useState('');
+  const [nearbyVenueCount, setNearbyVenueCount] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
 
   useEffect(() => {
+    api.getVenues().then(data => {
+      setAllVenues(data || []);
+      setVenues(data || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetchEvents();
-  }, [activeCategory]);
+  }, [activeCategory, activeVenue]);
 
   const fetchEvents = async (query = '') => {
     setLoading(true);
     try {
-      const data = await api.searchEvents(query || search, activeCategory);
+      const data = await api.searchEvents(query || search, activeCategory, activeVenue);
       setEvents(data || []);
     } catch (error) {
       console.error('Failed to fetch events:', error);
@@ -56,6 +76,82 @@ const Home = () => {
   const handleCategoryChange = (cat) => {
     setActiveCategory(cat);
     setSearch('');
+  };
+
+  const handleVenueChange = (e) => {
+    setActiveVenue(e.target.value);
+    setSearch('');
+  };
+
+  // ── Near My Location venue filter ──────────────────────────────────────────
+  const handleNearbyVenueToggle = () => {
+    if (nearbyVenueMode) {
+      // Turn off: restore all venues
+      setNearbyVenueMode(false);
+      setVenues(allVenues);
+      setActiveVenue('');
+      setVenueGeoError('');
+      return;
+    }
+    // Turn on: request geolocation then fetch nearby venues
+    setVenueGeoError('');
+    if (!navigator.geolocation) {
+      setVenueGeoError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setVenueGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const nearby = await api.getNearbyVenues(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            nearbyVenueRadius
+          );
+          setNearbyVenueMode(true);
+          setVenues(nearby || []);
+          setNearbyVenueCount(nearby?.length || 0);
+          setActiveVenue('');   // reset selected venue
+        } catch (err) {
+          setVenueGeoError('Failed to fetch nearby venues. Please try again.');
+        } finally {
+          setVenueGeoLoading(false);
+        }
+      },
+      () => {
+        setVenueGeoLoading(false);
+        setVenueGeoError('Location access denied. Please allow location and try again.');
+      }
+    );
+  };
+
+  // Re-fetch nearby venues when radius changes (only when mode is on)
+  const applyNearbyRadius = () => {
+    if (!nearbyVenueMode) return;
+    setVenueGeoLoading(true);
+    setVenueGeoError('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const nearby = await api.getNearbyVenues(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            nearbyVenueRadius
+          );
+          setVenues(nearby || []);
+          setNearbyVenueCount(nearby?.length || 0);
+          setActiveVenue('');
+        } catch {
+          setVenueGeoError('Failed to refresh nearby venues.');
+        } finally {
+          setVenueGeoLoading(false);
+        }
+      },
+      () => {
+        setVenueGeoLoading(false);
+        setVenueGeoError('Location access denied.');
+      }
+    );
   };
 
   const handleUseMyLocation = () => {
@@ -169,7 +265,145 @@ const Home = () => {
         ))}
       </div>
 
+      {/* Venue Filter */}
+      {(allVenues.length > 0) && (
+        <div style={{ marginBottom: '2rem' }}>
+
+          {/* Row 1: Near Me toggle + dropdown + clear */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+
+            {/* Near My Location toggle button */}
+            <button
+              id="venue-near-me-btn"
+              onClick={handleNearbyVenueToggle}
+              disabled={venueGeoLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.45rem',
+                padding: '0.45rem 1.1rem', borderRadius: '999px', cursor: venueGeoLoading ? 'wait' : 'pointer',
+                border: nearbyVenueMode ? '1.5px solid #22c55e' : '1.5px solid var(--border-color)',
+                background: nearbyVenueMode ? 'rgba(34,197,94,0.12)' : 'transparent',
+                color: nearbyVenueMode ? '#22c55e' : 'var(--text-muted)',
+                fontSize: '0.875rem', fontWeight: '500', transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => { if (!nearbyVenueMode) e.currentTarget.style.background = 'rgba(34,197,94,0.07)'; }}
+              onMouseLeave={e => { if (!nearbyVenueMode) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <LocateFixed size={15} />
+              {venueGeoLoading ? 'Getting location…' : nearbyVenueMode ? `Venues Near Me (${nearbyVenueCount})` : 'Venues Near Me'}
+            </button>
+
+            {/* Venue dropdown */}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <Building2
+                size={16}
+                style={{
+                  position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)',
+                  color: activeVenue ? 'var(--primary-color)' : 'var(--text-muted)',
+                  pointerEvents: 'none', zIndex: 1,
+                }}
+              />
+              <select
+                id="venue-filter-select"
+                value={activeVenue}
+                onChange={handleVenueChange}
+                disabled={venueGeoLoading}
+                style={{
+                  appearance: 'none',
+                  paddingLeft: '2.2rem', paddingRight: '2.4rem',
+                  paddingTop: '0.45rem', paddingBottom: '0.45rem',
+                  borderRadius: '999px',
+                  border: activeVenue
+                    ? '1.5px solid var(--primary-color)'
+                    : '1.5px solid var(--border-color)',
+                  background: activeVenue ? 'rgba(99,102,241,0.12)' : 'var(--card-bg)',
+                  color: activeVenue ? 'var(--primary-color)' : 'var(--text-muted)',
+                  fontSize: '0.875rem', fontWeight: '500',
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  minWidth: '190px', outline: 'none',
+                }}
+              >
+                <option value="">{nearbyVenueMode ? `All Nearby (${venues.length})` : 'All Venues'}</option>
+                {venues.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                    {nearbyVenueMode && v.distanceKm != null ? ` (${v.distanceKm} km)` : v.location ? ` — ${v.location}` : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                style={{
+                  position: 'absolute', right: '0.8rem', top: '50%', transform: 'translateY(-50%)',
+                  color: activeVenue ? 'var(--primary-color)' : 'var(--text-muted)',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+
+            {/* Clear venue button */}
+            {activeVenue && (
+              <button
+                onClick={() => setActiveVenue('')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  padding: '0.35rem 0.85rem', borderRadius: '999px',
+                  border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)',
+                  color: '#ef4444', fontSize: '0.8rem', fontWeight: '500',
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+              >
+                <X size={12} /> Clear Venue
+              </button>
+            )}
+          </div>
+
+          {/* Row 2: Radius slider (shown only in nearby mode) */}
+          {nearbyVenueMode && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              maxWidth: '480px', margin: '0.85rem auto 0',
+              padding: '0.7rem 1.1rem', borderRadius: '0.75rem',
+              background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)',
+            }}>
+              <Sliders size={15} style={{ color: '#22c55e', flexShrink: 0 }} />
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                Radius: <strong style={{ color: 'var(--text-main)' }}>{nearbyVenueRadius} km</strong>
+              </label>
+              <input
+                id="venue-radius-slider"
+                type="range" min="1" max="100"
+                value={nearbyVenueRadius}
+                onChange={e => setNearbyVenueRadius(Number(e.target.value))}
+                style={{ flexGrow: 1, accentColor: '#22c55e', cursor: 'pointer' }}
+              />
+              <button
+                onClick={applyNearbyRadius}
+                disabled={venueGeoLoading}
+                style={{
+                  padding: '0.3rem 0.8rem', borderRadius: '999px', flexShrink: 0,
+                  background: '#22c55e', color: '#fff', border: 'none',
+                  fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer',
+                  opacity: venueGeoLoading ? 0.6 : 1, transition: 'opacity 0.2s',
+                }}
+              >
+                {venueGeoLoading ? '…' : 'Apply'}
+              </button>
+            </div>
+          )}
+
+          {/* Geo error */}
+          {venueGeoError && (
+            <p style={{ textAlign: 'center', color: 'var(--danger-color)', fontSize: '0.82rem', marginTop: '0.5rem' }}>
+              ⚠️ {venueGeoError}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Events Grid */}
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading events...</div>
       ) : events.length === 0 ? (
