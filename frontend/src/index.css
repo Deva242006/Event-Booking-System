@@ -220,6 +220,99 @@ tr:hover td {
   to   { transform: rotate(360deg); }
 }
 
+/* Skeleton loading animation */
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
 /* Sticky header compensation */
 main.container { padding-top: 2rem; }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile hamburger button — hidden on desktop */
+.mobile-menu-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  /* Show hamburger, hide desktop nav */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .nav-links-desktop {
+    display: none !important;
+  }
+
+  /* Container padding */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* Event details responsive grid */
+  .event-details-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Home hero */
+  h1 {
+    font-size: 2rem !important;
+  }
+
+  /* Cards grid */
+  .card {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.6rem !important;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  .card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Hover effects — only on devices that support hover */
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Disable hover transforms on touch devices */
+@media (hover: none) {
+  .card-hover:hover {
+    transform: none;
+  }
+
+  .btn-primary:hover {
+    transform: none;
+  }
+}

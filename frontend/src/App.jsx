@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -51,9 +53,10 @@ function App() {
 
   return (
     <Router>
-      <div className="app">
+      <ScrollToTop />
+      <div className="app" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Navbar user={user} logout={logout} />
-        <main className="container animate-fade-in">
+        <main className="container animate-fade-in" style={{ flex: 1 }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={!user ? <Login login={login} /> : <Navigate to="/" />} />
@@ -67,6 +70,7 @@ function App() {
             <Route path="/admin" element={isAdmin ? <AdminPanel user={user} /> : <Navigate to="/" />} />
           </Routes>
         </main>
+        <Footer />
       </div>
     </Router>
   );

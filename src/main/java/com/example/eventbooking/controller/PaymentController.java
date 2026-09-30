@@ -15,7 +15,7 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @PostMapping("/{bookingId}/mock")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER') or hasRole('ORGANIZER') or hasRole('ADMIN')")
     public ResponseEntity<?> processMockPayment(@PathVariable String bookingId) {
         try {
             Booking confirmedBooking = paymentService.processMockPayment(bookingId);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Search, DollarSign, Navigation, Tag, Star, Heart, Building2, ChevronDown, Sliders, LocateFixed, X } from 'lucide-react';
+import { Calendar, MapPin, Search, DollarSign, Navigation, Tag, Star, Heart, Building2, ChevronDown, Sliders, LocateFixed, X, Clock, Users, Flame } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Music', 'Tech', 'Sports', 'Art', 'Food', 'Other'];
 
@@ -189,6 +189,18 @@ const Home = () => {
   };
 
   const catColor = (cat) => CATEGORY_COLORS[cat] || CATEGORY_COLORS['Other'];
+
+  // Mini countdown for event cards
+  const getTimeUntil = (dateTime) => {
+    if (!dateTime) return null;
+    const diff = new Date(dateTime).getTime() - Date.now();
+    if (diff <= 0) return { label: 'Event Ended', isPast: true };
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 30) return { label: `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} away`, isPast: false };
+    if (days > 0) return { label: `${days}d ${hours}h left`, isPast: false, isUrgent: days <= 3 };
+    return { label: `${hours}h left`, isPast: false, isUrgent: true };
+  };
 
   return (
     <div className="animate-fade-in">
@@ -418,6 +430,8 @@ const Home = () => {
             const avgRating = getAverageRating(event.reviews);
             const gradient = CARD_GRADIENTS[idx % CARD_GRADIENTS.length];
             const cc = event.category ? catColor(event.category) : null;
+            const timeInfo = getTimeUntil(event.dateTime);
+            const isTrending = event.reviews?.length >= 3;
 
             return (
               <div key={event.id} className="card card-hover" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', position: 'relative' }}>
@@ -435,6 +449,21 @@ const Home = () => {
                       fontSize: '1.1rem', padding: '0.5rem 1.5rem', borderRadius: '999px',
                       letterSpacing: '0.05em', textTransform: 'uppercase',
                     }}>Sold Out</span>
+                  </div>
+                )}
+                {/* Past Event Overlay */}
+                {timeInfo?.isPast && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.45)', zIndex: 2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '1rem',
+                    pointerEvents: 'none',
+                  }}>
+                    <span style={{
+                      background: 'rgba(100,116,139,0.9)', color: '#fff', fontWeight: '600',
+                      fontSize: '0.95rem', padding: '0.4rem 1.25rem', borderRadius: '999px',
+                    }}>Event Ended</span>
                   </div>
                 )}
                 {/* Card Banner */}
@@ -462,6 +491,31 @@ const Home = () => {
                       <Star size={11} fill="#eab308" /> {avgRating}
                     </span>
                   )}
+                  {/* Trending badge */}
+                  {isTrending && (
+                    <span style={{
+                      position: 'absolute', bottom: '0.75rem', left: '1rem',
+                      padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem',
+                      fontWeight: '600', background: 'rgba(249,115,22,0.2)', color: '#f97316',
+                      border: '1px solid rgba(249,115,22,0.4)', display: 'flex', alignItems: 'center', gap: '0.2rem'
+                    }}>
+                      <Flame size={10} /> Trending
+                    </span>
+                  )}
+                  {/* Countdown badge */}
+                  {timeInfo && !timeInfo.isPast && (
+                    <span style={{
+                      position: 'absolute', bottom: '0.75rem', right: '1rem',
+                      padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem',
+                      fontWeight: '600',
+                      background: timeInfo.isUrgent ? 'rgba(239,68,68,0.2)' : 'rgba(99,102,241,0.2)',
+                      color: timeInfo.isUrgent ? '#ef4444' : 'rgba(255,255,255,0.8)',
+                      border: `1px solid ${timeInfo.isUrgent ? 'rgba(239,68,68,0.4)' : 'rgba(99,102,241,0.4)'}`,
+                      display: 'flex', alignItems: 'center', gap: '0.2rem',
+                    }}>
+                      <Clock size={10} /> {timeInfo.label}
+                    </span>
+                  )}
                 </div>
 
                 {/* Card Body */}
@@ -477,9 +531,9 @@ const Home = () => {
                       {event.dateTime ? new Date(event.dateTime).toLocaleString() : 'Date TBD'}
                     </div>
                     {totalAvailable > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
-                        <DollarSign size={14} />
-                        {totalAvailable} tickets available
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: totalAvailable < 20 ? '#f59e0b' : 'var(--text-muted)' }}>
+                        <Users size={14} />
+                        {totalAvailable} tickets available {totalAvailable < 20 && '🔥'}
                       </div>
                     )}
                     {event.reviews?.length > 0 && (
@@ -495,7 +549,7 @@ const Home = () => {
                       {lowestPrice !== null ? (lowestPrice === 0 ? 'Free' : `From $${lowestPrice}`) : 'TBD'}
                     </span>
                     <Link to={`/events/${event.id}`} className="btn btn-outline" style={{ padding: '0.45rem 1rem', fontSize: '0.875rem' }}>
-                      {totalAvailable === 0 && event.ticketCategories?.length > 0 ? 'View Details' : 'View Details'}
+                      View Details
                     </Link>
                   </div>
                 </div>

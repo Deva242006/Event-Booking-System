@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Ticket, CreditCard, Clock, CheckCircle, XCircle, Calendar, Tag, DollarSign } from 'lucide-react';
+import { Ticket, CreditCard, Clock, CheckCircle, XCircle, Calendar, Tag, DollarSign, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const StatusBadge = ({ status }) => {
@@ -89,6 +89,95 @@ const Dashboard = ({ user }) => {
       Loading your dashboard...
     </div>
   );
+
+  const handleDownloadTicket = (booking) => {
+    const eventObj = events[booking.eventId];
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header gradient
+    const gradient = ctx.createLinearGradient(0, 0, 600, 0);
+    gradient.addColorStop(0, '#6366f1');
+    gradient.addColorStop(1, '#8b5cf6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 120);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('EventBook Ticket', 300, 70);
+
+    // Event Name
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(eventObj?.title || 'Event Ticket', 300, 180);
+
+    // Details
+    ctx.font = '20px sans-serif';
+    
+    ctx.textAlign = 'left';
+    let y = 240;
+    const addRow = (label, value) => {
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(label + ':', 50, y);
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'right';
+      ctx.fillText(value, 550, y);
+      ctx.textAlign = 'left';
+      y += 40;
+    };
+
+    addRow('Attendee', user.name || user.email);
+    addRow('Ticket Category', booking.ticketCategoryName);
+    addRow('Quantity', booking.quantity.toString());
+    addRow('Total Amount', '$' + booking.totalAmount);
+    if (eventObj?.dateTime) {
+      addRow('Date & Time', new Date(eventObj.dateTime).toLocaleString());
+    }
+    addRow('Booking ID', booking.id.substring(0, 12));
+
+    // Decorative line
+    ctx.beginPath();
+    ctx.moveTo(50, y);
+    ctx.lineTo(550, y);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    y += 40;
+
+    // QR Code
+    if (booking.qrCodeUrl) {
+      const img = new Image();
+      img.onload = () => {
+        // Draw white background for QR
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(190, y - 10, 220, 220);
+        ctx.drawImage(img, 200, y, 200, 200);
+        
+        // Save
+        const link = document.createElement('a');
+        link.download = `ticket-${booking.id.substring(0,8)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+      img.src = booking.qrCodeUrl;
+    } else {
+      const link = document.createElement('a');
+      link.download = `ticket-${booking.id.substring(0,8)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  };
 
   const confirmed = bookings.filter(b => b.status === 'CONFIRMED').length;
   const pending   = bookings.filter(b => b.status === 'PENDING').length;
@@ -248,9 +337,14 @@ const Dashboard = ({ user }) => {
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
               Present this QR code at the event entrance
             </p>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setQrModal(null)}>
-              Close
-            </button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }} onClick={() => handleDownloadTicket(qrModal)}>
+                <Download size={16} /> Download
+              </button>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setQrModal(null)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

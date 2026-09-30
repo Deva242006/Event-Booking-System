@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Calendar, MapPin, CheckCircle, Star, Heart, Send } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, Star, Heart, Send, Share2, Copy, Clock, Users } from 'lucide-react';
 
 const StarRating = ({ value, onChange, readOnly = false }) => (
   <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -26,11 +26,77 @@ const StarRating = ({ value, onChange, readOnly = false }) => (
   </div>
 );
 
+// ── Countdown Timer Component ──────────────────────────────────────────────────
+const CountdownTimer = ({ dateTime }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!dateTime) return;
+    const target = new Date(dateTime).getTime();
+
+    const calculate = () => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) {
+        setTimeLeft(null);
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      });
+    };
+
+    calculate();
+    const interval = setInterval(calculate, 1000);
+    return () => clearInterval(interval);
+  }, [dateTime]);
+
+  if (!timeLeft) return null;
+
+  const units = [
+    { label: 'Days', value: timeLeft.days },
+    { label: 'Hours', value: timeLeft.hours },
+    { label: 'Min', value: timeLeft.minutes },
+    { label: 'Sec', value: timeLeft.seconds },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex', gap: '0.6rem', justifyContent: 'center',
+      padding: '1rem', borderRadius: '0.75rem',
+      background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))',
+      border: '1px solid rgba(99,102,241,0.2)',
+      marginBottom: '1.5rem',
+    }}>
+      <Clock size={16} style={{ color: 'var(--primary-color)', marginTop: '0.2rem' }} />
+      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '0.25rem' }}>
+        Starts in
+      </span>
+      {units.map(u => (
+        <div key={u.label} style={{ textAlign: 'center', minWidth: '42px' }}>
+          <div style={{
+            fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)',
+            background: 'rgba(99,102,241,0.1)', borderRadius: '0.5rem', padding: '0.25rem 0.4rem',
+          }}>
+            {String(u.value).padStart(2, '0')}
+          </div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {u.label}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const EventDetails = ({ user }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
-  const [venue, setVenue] = useState(null);         // ← NEW: resolved venue object
+  const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -41,6 +107,10 @@ const EventDetails = ({ user }) => {
   // Wishlist
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  // Share
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Review form
   const [reviewRating, setReviewRating] = useState(5);
@@ -53,7 +123,7 @@ const EventDetails = ({ user }) => {
     fetchEventDetails();
   }, [id]);
 
-  // Sync wishlist state from loaded event — compare by email (JWT subject)
+  // BUG FIX: Consistently use user.email for wishlist state (backend stores email)
   useEffect(() => {
     if (event && user) {
       setWishlisted(event.savedByUserIds?.includes(user.email) || false);
@@ -67,7 +137,6 @@ const EventDetails = ({ user }) => {
       if (data?.ticketCategories?.length > 0) {
         setSelectedCategory(data.ticketCategories[0].name);
       }
-      // Resolve venue name from venueId
       if (data?.venueId) {
         try {
           const venues = await api.getVenues();
@@ -105,7 +174,8 @@ const EventDetails = ({ user }) => {
     setWishlistLoading(true);
     try {
       const updated = await api.toggleWishlist(id);
-      setWishlisted(updated.savedByUserIds?.includes(user.id) || false);
+      // BUG FIX: use user.email consistently (backend stores email in savedByUserIds)
+      setWishlisted(updated.savedByUserIds?.includes(user.email) || false);
       setEvent(updated);
     } catch (err) {
       console.error('Wishlist toggle failed:', err);
@@ -134,6 +204,25 @@ const EventDetails = ({ user }) => {
     }
   };
 
+  // ── Share Event ──────────────────────────────────────────────────────────────
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareTwitter = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`Check out "${event?.title}" on EventBook! 🎉`);
+    window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
+  };
+
+  const handleShareWhatsApp = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`Check out "${event?.title}" on EventBook! 🎉 ${window.location.href}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   const getSelectedCategoryData = () =>
     event?.ticketCategories?.find(cat => cat.name === selectedCategory);
 
@@ -142,18 +231,30 @@ const EventDetails = ({ user }) => {
     return (event.reviews.reduce((s, r) => s + r.rating, 0) / event.reviews.length).toFixed(1);
   };
 
-  const userAlreadyReviewed = () =>
-    user && event?.reviews?.some(r => r.userId === user.id);
+  const getTotalAvailable = () => {
+    if (!event?.ticketCategories?.length) return 0;
+    return event.ticketCategories.reduce((sum, cat) => sum + cat.totalAvailable, 0);
+  };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '4rem' }}>Loading event details...</div>;
+  const userAlreadyReviewed = () =>
+    user && event?.reviews?.some(r => r.userId === user.email);
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="skeleton-pulse" style={{ width: '200px', height: '24px', margin: '0 auto 1rem', borderRadius: '0.5rem', background: 'var(--surface-color)' }} />
+      <div style={{ color: 'var(--text-muted)' }}>Loading event details...</div>
+    </div>
+  );
   if (!event) return <div style={{ textAlign: 'center', padding: '4rem' }}>Event not found.</div>;
 
   const categoryData = getSelectedCategoryData();
   const avgRating = getAverageRating();
+  const totalAvailable = getTotalAvailable();
+  const isPastEvent = event.dateTime && new Date(event.dateTime) < new Date();
 
   return (
     <div className="animate-fade-in" style={{ padding: '2rem 0' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', alignItems: 'start' }}>
+      <div className="event-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', alignItems: 'start' }}>
 
         {/* ── Left: Main Details ─────────────────────────── */}
         <div>
@@ -174,6 +275,18 @@ const EventDetails = ({ user }) => {
                 color: '#fff', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.3)',
               }}>
                 {event.category}
+              </span>
+            )}
+
+            {/* Past event badge */}
+            {isPastEvent && (
+              <span style={{
+                position: 'absolute', bottom: '1.25rem', right: '1.25rem',
+                padding: '0.35rem 0.9rem', borderRadius: '999px', fontSize: '0.8rem',
+                fontWeight: '600', background: 'rgba(239,68,68,0.85)',
+                color: '#fff', backdropFilter: 'blur(6px)',
+              }}>
+                Event Ended
               </span>
             )}
 
@@ -212,7 +325,67 @@ const EventDetails = ({ user }) => {
             )}
           </div>
 
-          <h1 style={{ fontSize: '2.2rem', marginBottom: '0.75rem' }}>{event.title}</h1>
+          {/* Title + Share */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}>
+            <h1 style={{ fontSize: '2.2rem' }}>{event.title}</h1>
+            <div style={{ position: 'relative' }}>
+              <button
+                id="share-event-btn"
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.5rem 1rem', borderRadius: '999px',
+                  border: '1px solid var(--border-color)', background: 'var(--surface-color)',
+                  color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500',
+                  transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+                }}
+              >
+                <Share2 size={15} /> Share
+              </button>
+              {showShareMenu && (
+                <div style={{
+                  position: 'absolute', top: '110%', right: 0, zIndex: 50,
+                  background: 'var(--surface-color)', border: '1px solid var(--border-color)',
+                  borderRadius: '0.75rem', padding: '0.5rem', minWidth: '180px',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+                }}>
+                  <button onClick={handleCopyLink} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
+                    padding: '0.6rem 0.75rem', border: 'none', background: 'transparent',
+                    color: copied ? '#10b981' : 'var(--text-main)', cursor: 'pointer', borderRadius: '0.4rem',
+                    fontSize: '0.85rem', transition: 'background 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <Copy size={14} /> {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                  <button onClick={handleShareTwitter} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
+                    padding: '0.6rem 0.75rem', border: 'none', background: 'transparent',
+                    color: 'var(--text-main)', cursor: 'pointer', borderRadius: '0.4rem',
+                    fontSize: '0.85rem', transition: 'background 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    𝕏 Share on X
+                  </button>
+                  <button onClick={handleShareWhatsApp} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
+                    padding: '0.6rem 0.75rem', border: 'none', background: 'transparent',
+                    color: 'var(--text-main)', cursor: 'pointer', borderRadius: '0.4rem',
+                    fontSize: '0.85rem', transition: 'background 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    💬 WhatsApp
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
@@ -227,7 +400,18 @@ const EventDetails = ({ user }) => {
                 </span>
               </div>
             )}
+            {totalAvailable > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                <Users size={18} style={{ color: 'var(--primary-color)' }} />
+                <span>{totalAvailable} seats available</span>
+              </div>
+            )}
           </div>
+
+          {/* Countdown Timer */}
+          {!isPastEvent && event.dateTime && (
+            <CountdownTimer dateTime={event.dateTime} />
+          )}
 
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ marginBottom: '0.75rem', fontSize: '1.15rem' }}>About this Event</h3>
@@ -239,19 +423,30 @@ const EventDetails = ({ user }) => {
             <div className="card" style={{ marginBottom: '1.5rem' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '1.15rem' }}>Ticket Categories</h3>
               <div style={{ display: 'grid', gap: '0.6rem' }}>
-                {event.ticketCategories.map(cat => (
-                  <div key={cat.name} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '0.85rem 1rem', border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem', background: 'var(--bg-color)',
-                  }}>
-                    <div>
-                      <strong>{cat.name}</strong>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{cat.totalAvailable} available</div>
+                {event.ticketCategories.map(cat => {
+                  const pctSold = cat.totalAvailable <= 0 ? 100 : 0; // We don't have original count, so just show availability
+                  return (
+                    <div key={cat.name} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '0.85rem 1rem', border: '1px solid var(--border-color)',
+                      borderRadius: '0.5rem', background: 'var(--bg-color)',
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <strong>{cat.name}</strong>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                          {cat.totalAvailable > 0 ? (
+                            <span style={{ color: cat.totalAvailable < 10 ? '#f59e0b' : 'var(--text-muted)' }}>
+                              {cat.totalAvailable} available {cat.totalAvailable < 10 && '🔥'}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#ef4444' }}>Sold Out</span>
+                          )}
+                        </div>
+                      </div>
+                      <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '1.15rem' }}>${cat.price}</span>
                     </div>
-                    <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '1.15rem' }}>${cat.price}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -333,12 +528,17 @@ const EventDetails = ({ user }) => {
         </div>
 
         {/* ── Right: Booking Card ─────────────────────────── */}
-        <div className="card" style={{ position: 'sticky', top: '2rem' }}>
+        <div className="card" style={{ position: 'sticky', top: '5rem' }}>
           <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
             Book Tickets
           </h3>
 
-          {success ? (
+          {isPastEvent ? (
+            <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+              <Clock size={48} style={{ marginBottom: '1rem', opacity: 0.4 }} />
+              <p>This event has already ended.</p>
+            </div>
+          ) : success ? (
             <div style={{ textAlign: 'center', padding: '2rem 0' }}>
               <CheckCircle size={48} style={{ color: 'var(--success-color)', margin: '0 auto 1rem' }} />
               <p style={{ color: 'var(--success-color)', marginBottom: '1.5rem' }}>{success}</p>
@@ -390,7 +590,7 @@ const EventDetails = ({ user }) => {
               {categoryData && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                   <span>Total</span>
-                  <span style={{ fontWeight: 'bold' }}>${(categoryData.price * quantity).toFixed(2)}</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>${(categoryData.price * quantity).toFixed(2)}</span>
                 </div>
               )}
 

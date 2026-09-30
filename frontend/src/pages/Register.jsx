@@ -93,6 +93,11 @@ const Register = () => {
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
             {loading ? 'Creating account...' : 'Register'}
           </button>
+
+          <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+            Already have an account?{' '}
+            <Link to="/login" style={{ color: 'var(--primary-color)', fontWeight: '500' }}>Login here</Link>
+          </p>
         </form>
       </div>
     </div>

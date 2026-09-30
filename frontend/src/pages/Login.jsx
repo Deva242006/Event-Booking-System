@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
+import { Link } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 
 const Login = ({ login }) => {
@@ -66,6 +67,11 @@ const Login = ({ login }) => {
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}
           </button>
+
+          <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+            Don't have an account?{' '}
+            <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: '500' }}>Register here</Link>
+          </p>
         </form>
       </div>
     </div>

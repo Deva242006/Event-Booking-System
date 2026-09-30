@@ -24,9 +24,10 @@ const AdminPanel = ({ user }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const isAdmin = user?.role === 'ROLE_ADMIN';
-  if (!isAdmin) return <Navigate to="/" />;
 
+  // Hooks MUST be called before any conditional return (React rules of hooks)
   useEffect(() => {
+    if (!isAdmin) return; // guard inside the hook instead of early return before it
     api.getAdminStats()
       .then(setStats)
       .catch(console.error)
@@ -40,7 +41,10 @@ const AdminPanel = ({ user }) => {
     api.getEvents()
       .then(data => setEvents(data || []))
       .catch(console.error);
-  }, []);
+  }, [isAdmin]);
+
+  // Conditional return AFTER all hooks
+  if (!isAdmin) return <Navigate to="/" />;
 
   const tabStyle = (active) => ({
     padding: '0.65rem 1.25rem', border: 'none', cursor: 'pointer',
