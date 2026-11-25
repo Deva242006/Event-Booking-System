@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 import java.util.List;
@@ -62,13 +63,13 @@ public class SecurityConfig {
                     // Public auth endpoints
                     .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                     // Public read-only event endpoints
-                    .requestMatchers("GET", "/api/events").permitAll()
-                    .requestMatchers("GET", "/api/events/search").permitAll()
-                    .requestMatchers("GET", "/api/events/nearby").permitAll()
-                    .requestMatchers("GET", "/api/events/upcoming").permitAll()
-                    .requestMatchers("GET", "/api/events/{id}").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events/search").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events/nearby").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events/upcoming").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events/{id}").permitAll()
                     // Public venue reads
-                    .requestMatchers("GET", "/api/venues/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/venues/**").permitAll()
                     // Swagger / OpenAPI
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     // Admin-only routes (method-level @PreAuthorize handles the finer checks)

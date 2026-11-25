@@ -3,14 +3,10 @@ package com.example.eventbooking.controller;
 import com.example.eventbooking.model.Venue;
 import com.example.eventbooking.service.VenueService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.geo.GeoResults;
-import org.springframework.data.geo.Metrics;
-import org.springframework.data.geo.Point;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.NearQuery;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +18,6 @@ public class VenueController {
 
     @Autowired
     private VenueService venueService;
-
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
     @GetMapping
     public List<Venue> getAllVenues() {
@@ -41,25 +34,23 @@ public class VenueController {
             @RequestParam double lng,
             @RequestParam(defaultValue = "10") double radiusKm) {
         try {
-            Point userLocation = new Point(lng, lat); // GeoJSON: [lng, lat]
-            NearQuery nearQuery = NearQuery.near(userLocation, Metrics.KILOMETERS)
-                    .maxDistance(radiusKm)
-                    .spherical(true);
+            List<Venue> venues = venueService.getAllVenues();
 
-            GeoResults<Venue> geoResults = mongoTemplate.geoNear(nearQuery, Venue.class);
-
-            List<Map<String, Object>> results = geoResults.getContent().stream()
-                    .map(r -> {
+            List<Map<String, Object>> results = venues.stream()
+                    .filter(v -> v.getLatitude() != null && v.getLongitude() != null)
+                    .map(v -> {
+                        double distance = haversineDistanceKm(lat, lng, v.getLatitude(), v.getLongitude());
                         Map<String, Object> entry = new LinkedHashMap<>();
-                        Venue v = r.getContent();
                         entry.put("id", v.getId());
                         entry.put("name", v.getName());
                         entry.put("location", v.getLocation());
                         entry.put("capacity", v.getCapacity());
                         entry.put("coordinates", v.getCoordinates());
-                        entry.put("distanceKm", Math.round(r.getDistance().getValue() * 10.0) / 10.0);
+                        entry.put("distanceKm", Math.round(distance * 10.0) / 10.0);
                         return entry;
                     })
+                    .filter(e -> ((Double) e.get("distanceKm")) <= radiusKm)
+                    .sorted(Comparator.comparingDouble(e -> (Double) e.get("distanceKm")))
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(results);
@@ -67,6 +58,17 @@ public class VenueController {
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Failed to fetch nearby venues: " + e.getMessage()));
         }
+    }
+
+    private static double haversineDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // Earth radius in km
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     @GetMapping("/{id}")

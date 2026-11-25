@@ -49,7 +49,7 @@ public class AuthController {
 
         return ResponseEntity.ok(new AuthResponse(
                 jwt,
-                userDetails.getId(),           // ← BUG FIX: include MongoDB _id
+                userDetails.getId(),
                 userDetails.getName(),
                 userDetails.getEmail(),
                 userDetails.getAuthorities().iterator().next().getAuthority()

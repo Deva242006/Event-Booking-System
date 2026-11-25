@@ -1,16 +1,23 @@
 package com.example.eventbooking.model;
 
+import jakarta.persistence.*;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-@Document(collection = "users")
+@Entity
+@Table(name = "users")
 public class User {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+    
     private String name;
+    
+    @Column(unique = true, nullable = false)
     private String email;
+    
     private String password;
+    
+    @Enumerated(EnumType.STRING)
     private Role role;
 }
