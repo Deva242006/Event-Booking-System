@@ -84,6 +84,7 @@ const Register = () => {
             >
               <option value="USER">Book events (Attendee)</option>
               <option value="ORGANIZER">Create & manage events (Organizer)</option>
+              <option value="ADMIN">Administrator (Admin)</option>
             </select>
           </div>
           

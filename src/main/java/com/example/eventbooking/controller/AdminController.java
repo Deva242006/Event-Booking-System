@@ -2,6 +2,8 @@ package com.example.eventbooking.controller;
 
 import com.example.eventbooking.model.Booking;
 import com.example.eventbooking.model.BookingStatus;
+import com.example.eventbooking.model.Role;
+import com.example.eventbooking.model.User;
 import com.example.eventbooking.repository.BookingRepository;
 import com.example.eventbooking.repository.EventRepository;
 import com.example.eventbooking.repository.UserRepository;
@@ -75,5 +77,37 @@ public class AdminController {
     @GetMapping("/bookings")
     public ResponseEntity<List<Booking>> getAllBookings() {
         return ResponseEntity.ok(bookingRepository.findAll());
+    }
+
+    /**
+     * Returns all users in the system for admin user management.
+     */
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    /**
+     * Admin: update a user's role.
+     */
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<?> updateUserRole(@PathVariable String id, @RequestParam Role role) {
+        return userRepository.findById(id).map(user -> {
+            user.setRole(role);
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("message", "User role updated successfully", "user", user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Admin: delete a user.
+     */
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable String id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
 }

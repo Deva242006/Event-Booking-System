@@ -98,4 +98,10 @@ export const api = {
   getAllBookings: () => request('/admin/bookings', { method: 'GET' }),
   /** Admin: attendees for a specific event */
   getEventAttendees: (eventId) => request(`/events/${eventId}/attendees`, { method: 'GET' }),
+  /** Admin: get all users */
+  getAdminUsers: () => request('/admin/users', { method: 'GET' }),
+  /** Admin: update user role */
+  updateUserRole: (id, role) => request(`/admin/users/${id}/role?role=${role}`, { method: 'PUT' }),
+  /** Admin: delete user */
+  deleteUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
 };
